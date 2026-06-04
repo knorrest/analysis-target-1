@@ -14,11 +14,37 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.PR_AGENT_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PR_AGENT_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::663844207162:role/Bedrock_InvokeModel
+          aws-region: eu-west-1
+          aws-profile: codescene-dev
+
+      - name: Write OpenCode settings for Bedrock
+        run: |
+          mkdir -p ~/.config/opencode
+          cat > ~/.config/opencode/opencode.json << 'EOF'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "model": "amazon-bedrock/eu.anthropic.claude-sonnet-4-6",
+            "provider": {
+              "amazon-bedrock": {
+                "options": {
+                  "region": "eu-west-1",
+                  "profile": "codescene-dev"
+                }
+              }
+            }
+          }
+          EOF
+
       - name: Run refactoring agent
         uses: codescene-oss/pr-refactoring-agent@main
         with:
           pr_number: ${{ github.event.issue.number }}
           command: ${{ github.event.comment.body }}
-          model: 'github-copilot/claude-sonnet-4.6'
+          model: 'amazon-bedrock/eu.anthropic.claude-sonnet-4-6'
           codescene_token: ${{ secrets.PR_AGENT_CODESCENE_ACCESS_TOKEN }}
-          opencode_auth_json: ${{ secrets.PR_AGENT_OPENCODE_AUTH_JSON }}
